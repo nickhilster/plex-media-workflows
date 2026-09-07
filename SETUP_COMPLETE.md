@@ -154,7 +154,7 @@ Layer 4: Configuration Lock (PLEX_ENABLE_MUTATIVE_OPS=false)
 ### `.env` File (Local, Gitignored)
 
 ```env
-PLEX_TOKEN=a_Ly2_csT-nyzKy6xgZF
+PLEX_TOKEN=your_plex_token_here
 PLEX_URL=http://127.0.0.1:32400
 MCP_HOST=127.0.0.1
 MCP_PORT=3002
@@ -197,7 +197,7 @@ Add to `claude_desktop_config.json`:
       "command": "node",
       "args": ["C:\\plex-mcp\\src\\plex-mcp-server\\build\\plex-mcp-server.js"],
       "env": {
-        "PLEX_TOKEN": "a_Ly2_csT-nyzKy6xgZF",
+        "PLEX_TOKEN": "your_plex_token_here",
         "PLEX_URL": "http://127.0.0.1:32400"
       }
     }

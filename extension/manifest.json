@@ -1,0 +1,82 @@
+{
+  "dxt_version": "0.1",
+  "name": "plex-library",
+  "display_name": "Plex Library",
+  "version": "1.0.0",
+  "description": "Read-only access to your Plex Media Server — browse libraries, search media, view watch history, and get personalized recommendations.",
+  "long_description": "Connects Claude to your local Plex Media Server via the Model Context Protocol. Exposes 46+ read-only tools covering library browsing, search, metadata, watch history, viewing statistics, and AI-powered recommendations based on your actual watch history. No write operations are enabled — Claude cannot modify, delete, or reorganize anything in your library.",
+  "author": {
+    "name": "Nick"
+  },
+  "license": "MIT",
+  "keywords": ["plex", "media", "movies", "tv", "recommendations"],
+  "server": {
+    "type": "node",
+    "entry_point": "server/build/plex-mcp-server.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/build/plex-mcp-server.js"
+      ],
+      "env": {
+        "PLEX_TOKEN": "${user_config.plex_token}",
+        "PLEX_URL": "${user_config.plex_url}",
+        "RADARR_URL": "${user_config.radarr_url}",
+        "RADARR_API_KEY": "${user_config.radarr_api_key}"
+      }
+    }
+  },
+  "user_config": {
+    "plex_token": {
+      "type": "string",
+      "title": "Plex Token",
+      "description": "Your Plex authentication token (from Plex Web → DevTools → localStorage.getItem('myPlexAccessToken'))",
+      "sensitive": true,
+      "required": true
+    },
+    "plex_url": {
+      "type": "string",
+      "title": "Plex Server URL",
+      "description": "The URL of your Plex Media Server",
+      "default": "http://127.0.0.1:32400",
+      "required": true
+    },
+    "radarr_url": {
+      "type": "string",
+      "title": "Radarr URL (optional)",
+      "description": "URL of your Radarr instance, for movie search/tracking only — no indexers or download client are configured, so nothing can actually be downloaded",
+      "default": "http://127.0.0.1:7878",
+      "required": false
+    },
+    "radarr_api_key": {
+      "type": "string",
+      "title": "Radarr API Key (optional)",
+      "description": "Found in Radarr → Settings → General → API Key",
+      "sensitive": true,
+      "required": false
+    }
+  },
+  "tools": [
+    { "name": "get_libraries", "description": "List all Plex libraries" },
+    { "name": "get_library_items", "description": "Browse items in a library" },
+    { "name": "search_media", "description": "Search media globally or in a library" },
+    { "name": "get_media_details", "description": "Get detailed metadata for an item" },
+    { "name": "get_recently_added", "description": "Recently added content" },
+    { "name": "get_on_deck", "description": "Continue watching list" },
+    { "name": "get_recently_watched", "description": "Recently watched content" },
+    { "name": "get_watch_history", "description": "Detailed watch sessions" },
+    { "name": "get_watch_stats", "description": "Viewing statistics" },
+    { "name": "get_recommendations", "description": "Personalized recommendations based on watch history" },
+    { "name": "radarr_search", "description": "Search TMDB for a movie (tracking/metadata only — no indexers configured, nothing downloads)" },
+    { "name": "radarr_get_movies", "description": "List movies tracked in Radarr" },
+    { "name": "radarr_get_missing", "description": "List monitored movies not yet available" },
+    { "name": "radarr_get_calendar", "description": "Upcoming movie release dates" },
+    { "name": "arr_get_status", "description": "Check Radarr/Sonarr connection status" }
+  ],
+  "compatibility": {
+    "platforms": ["win32"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}

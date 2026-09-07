@@ -87,7 +87,7 @@ Then open: http://127.0.0.1:8181
 
 ```env
 # Your Plex authentication token (from browser DevTools)
-PLEX_TOKEN=a_Ly2_csT-nyzKy6xgZF
+PLEX_TOKEN=your_plex_token_here
 
 # Your Plex server URL
 PLEX_URL=http://127.0.0.1:32400

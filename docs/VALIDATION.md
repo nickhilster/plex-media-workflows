@@ -27,7 +27,7 @@
 **Token Verification:**
 ```
 Source: localStorage.getItem('myPlexAccessToken')
-Token: a_Ly2_csT-nyzKy6xgZF
+Token: your_plex_token_here
 Status: ✓ Valid and working
 ```
 

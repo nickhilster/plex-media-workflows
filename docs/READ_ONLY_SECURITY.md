@@ -175,7 +175,7 @@ POST /library/{id}/add                     ✗ Not called
 ### Layer 3: Token Permissions
 
 ```
-PLEX_TOKEN = a_Ly2_csT-nyzKy6xgZF
+PLEX_TOKEN = your_plex_token_here
               ↓
 Plex Server validates token scope
               ↓
@@ -190,7 +190,7 @@ All write operations rejected by Plex (401/403)
 
 ```env
 # .env (protected, not in git)
-PLEX_TOKEN=a_Ly2_csT-nyzKy6xgZF
+PLEX_TOKEN=your_plex_token_here
 PLEX_ENABLE_MUTATIVE_OPS=false             # NEVER true
 PLEX_WRITE_ENABLED=false                   # NEVER true
 ```
@@ -303,7 +303,7 @@ Location: `C:\plex-mcp\.env`
 
 ```env
 # Read-only configuration (FIXED - never modify)
-PLEX_TOKEN=a_Ly2_csT-nyzKy6xgZF
+PLEX_TOKEN=your_plex_token_here
 PLEX_URL=http://127.0.0.1:32400
 PLEX_ENABLE_MUTATIVE_OPS=false
 PLEX_WRITE_ENABLED=false

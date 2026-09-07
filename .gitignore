@@ -20,3 +20,11 @@ build/
 radarr/config/
 radarr/.apikey
 tautulli/config/
+
+# The extension package is a self-contained, distributable bundle for
+# Claude Desktop's "Install unpacked extension" flow — its compiled
+# server IS committed so the folder works out of the box. Only its
+# node_modules is excluded (large, regenerate with scripts/build-extension.ps1).
+!extension/server/build/
+!extension/server/build/**
+extension/server/node_modules/

@@ -1,0 +1,62 @@
+{
+  "name": "plex-mcp-server",
+  "version": "1.6.0",
+  "description": "Unified MCP server for Plex, Sonarr, Radarr, and Trakt — 46 AI tools for managing your media library with personalized recommendations (58 with write operations enabled)",
+  "type": "module",
+  "main": "build/plex-mcp-server.js",
+  "bin": {
+    "plex-mcp-server": "build/plex-mcp-server.js",
+    "plex-trakt-server": "build/plex-trakt-server.js",
+    "plex-arr-server": "build/plex-arr-server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/niavasha/plex-mcp-server.git"
+  },
+  "homepage": "https://github.com/niavasha/plex-mcp-server",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/plex-mcp-server.js",
+    "start:trakt": "node build/plex-trakt-server.js",
+    "dev": "tsx src/plex-mcp-server.ts",
+    "dev:trakt": "tsx src/plex-trakt-server.ts",
+    "start:arr": "node build/plex-arr-server.js",
+    "dev:arr": "tsx src/plex-arr-server.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@toon-format/toon": "^4.1.1",
+    "axios": "^1.14.0",
+    "dotenv": "^17.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.2"
+  },
+  "keywords": [
+    "mcp",
+    "plex",
+    "plex-media-server",
+    "ai",
+    "claude",
+    "model-context-protocol",
+    "sonarr",
+    "radarr",
+    "trakt",
+    "media-server",
+    "home-automation"
+  ],
+  "author": "niavasha",
+  "license": "MIT"
+}
