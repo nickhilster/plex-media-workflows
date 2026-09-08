@@ -2,7 +2,18 @@
 
 ## Objective
 
-Ensure the MCP bridge exposes **only read-only access** to the Plex library, preventing any modifications to media, metadata, or server state.
+Ensure the MCP bridge exposes **only read-only access** to the Plex library, preventing any modifications to media, metadata, or server state — with one deliberate, narrow exception described below.
+
+## Update: one write capability enabled (watchlist)
+
+As of the Claude Desktop Extension setup, `add_to_watchlist` / `remove_from_watchlist` are enabled — adding or removing an item from your personal Plex watchlist. Every other write tool (12 total in the upstream server, now 10 remaining after carving these two out) stays blocked.
+
+This is enforced by `extension/server/watchlist-gate.js`, a stdio proxy that sits in front of the real MCP server:
+- It sets `PLEX_ENABLE_MUTATIVE_OPS=true` for the child process internally (required to unlock watchlist tools at all — the upstream server has no per-tool flag)
+- It filters the `tools/list` response so the other 10 write tools are never advertised to any MCP client
+- It intercepts `tools/call` for those 10 tools and rejects them with an error *before* they ever reach the real server, even if a client somehow requests one by name
+
+So the "only 46 read-only tools" claim below is superseded: it's now 46 read-only tools + 2 watchlist tools, with the remaining 10 write tools hidden and hard-blocked at the proxy layer rather than merely undocumented.
 
 ## Current Implementation
 

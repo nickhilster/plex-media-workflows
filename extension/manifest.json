@@ -4,7 +4,7 @@
   "display_name": "Plex Library",
   "version": "1.0.0",
   "description": "Read-only access to your Plex Media Server — browse libraries, search media, view watch history, and get personalized recommendations.",
-  "long_description": "Connects Claude to your local Plex Media Server via the Model Context Protocol. Exposes 46+ read-only tools covering library browsing, search, metadata, watch history, viewing statistics, and AI-powered recommendations based on your actual watch history. No write operations are enabled — Claude cannot modify, delete, or reorganize anything in your library.",
+  "long_description": "Connects Claude to your local Plex Media Server via the Model Context Protocol. Exposes 46+ read-only tools covering library browsing, search, metadata, watch history, viewing statistics, and AI-powered recommendations based on your actual watch history. Exactly one write capability is enabled — adding/removing items from your Plex watchlist — enforced by a proxy in front of the upstream server so every other write tool (metadata edits, playlist changes, watch-state changes, ratings) stays hidden and blocked even though the server's own all-or-nothing write flag is technically on.",
   "author": {
     "name": "Nick"
   },
@@ -12,11 +12,11 @@
   "keywords": ["plex", "media", "movies", "tv", "recommendations"],
   "server": {
     "type": "node",
-    "entry_point": "server/build/plex-mcp-server.js",
+    "entry_point": "server/watchlist-gate.js",
     "mcp_config": {
       "command": "node",
       "args": [
-        "${__dirname}/server/build/plex-mcp-server.js"
+        "${__dirname}/server/watchlist-gate.js"
       ],
       "env": {
         "PLEX_TOKEN": "${user_config.plex_token}",
@@ -67,6 +67,8 @@
     { "name": "get_watch_history", "description": "Detailed watch sessions" },
     { "name": "get_watch_stats", "description": "Viewing statistics" },
     { "name": "get_recommendations", "description": "Personalized recommendations based on watch history" },
+    { "name": "add_to_watchlist", "description": "Add a movie/show to your Plex watchlist (the only write tool enabled)" },
+    { "name": "remove_from_watchlist", "description": "Remove a movie/show from your Plex watchlist" },
     { "name": "radarr_search", "description": "Search TMDB for a movie (tracking/metadata only — no indexers configured, nothing downloads)" },
     { "name": "radarr_get_movies", "description": "List movies tracked in Radarr" },
     { "name": "radarr_get_missing", "description": "List monitored movies not yet available" },
