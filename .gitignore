@@ -29,3 +29,4 @@ tautulli/config/
 !extension/server/build/**
 extension/server/node_modules/
 movie_library_scan.txt
+exports/

@@ -65,6 +65,8 @@ export function stdioServerParameters(env = process.env) {
   };
 }
 
+export { SessionStore };
+
 function positiveIntFromEnv(name, fallback) {
   const raw = process.env[name];
   if (!raw) return fallback;
@@ -82,6 +84,11 @@ class SessionStore {
     this.maxSessions = maxSessions;
     this.idleTimeoutMs = idleTimeoutMs;
     this.sessions = new Map();
+    // Slots claimed between the capacity check and the session actually
+    // being created (spawn + handshake is async). Without this, N concurrent
+    // requests can all observe capacity available before any of them has
+    // been added, all proceed, and maxSessions is not enforced at all.
+    this.pendingReservations = 0;
     this.sweeper = setInterval(() => this.sweep(), 30_000);
     this.sweeper.unref?.();
   }
@@ -97,12 +104,43 @@ class SessionStore {
     return entry;
   }
 
-  hasCapacity() {
-    return this.sessions.size < this.maxSessions;
+  // Synchronously claims a slot if one is available. Must be paired with
+  // either add() (on success) or releaseReservation() (on failure) — both
+  // of which give the slot back one way or the other.
+  tryReserve() {
+    if (this.sessions.size + this.pendingReservations >= this.maxSessions) {
+      return false;
+    }
+    this.pendingReservations++;
+    return true;
+  }
+
+  releaseReservation() {
+    this.pendingReservations = Math.max(0, this.pendingReservations - 1);
   }
 
   add(id, entry) {
-    this.sessions.set(id, { ...entry, lastActivity: Date.now() });
+    this.releaseReservation();
+    this.sessions.set(id, { ...entry, lastActivity: Date.now(), activeRequests: 0 });
+  }
+
+  // Call before awaiting a session's transport for a request, and
+  // endRequest() in a finally — this is what lets sweep() know a session is
+  // genuinely busy (e.g. a long-lived SSE stream or a slow tool call) rather
+  // than merely old, so it never tears down transports out from under an
+  // in-flight request.
+  beginRequest(id) {
+    const entry = this.sessions.get(id);
+    if (!entry) return;
+    entry.activeRequests++;
+    entry.lastActivity = Date.now();
+  }
+
+  endRequest(id) {
+    const entry = this.sessions.get(id);
+    if (!entry) return;
+    entry.activeRequests = Math.max(0, entry.activeRequests - 1);
+    entry.lastActivity = Date.now();
   }
 
   close(id) {
@@ -117,6 +155,7 @@ class SessionStore {
   sweep() {
     const cutoff = Date.now() - this.idleTimeoutMs;
     for (const [id, entry] of this.sessions) {
+      if (entry.activeRequests > 0) continue; // never close a session mid-request
       if (entry.lastActivity < cutoff) this.close(id);
     }
   }
@@ -176,7 +215,17 @@ export function createAuthenticatedMcpHandler({ bearerToken, store }) {
         sendJson(res, 404, { jsonrpc: "2.0", error: { code: -32001, message: "Session not found or expired" }, id: null });
         return;
       }
-      await entry.httpTransport.handleRequest(req, res);
+      // beginRequest/endRequest bracket every await on this session's
+      // transport so sweep() can see it's genuinely busy (a long-lived SSE
+      // stream, or a slow tool call) and never tears it down mid-request —
+      // relying on lastActivity alone left a window where an idle-timeout
+      // sweep could close the transports out from under an active request.
+      store.beginRequest(sessionId);
+      try {
+        await entry.httpTransport.handleRequest(req, res);
+      } finally {
+        store.endRequest(sessionId);
+      }
       return;
     }
 
@@ -185,27 +234,41 @@ export function createAuthenticatedMcpHandler({ bearerToken, store }) {
       return;
     }
 
-    if (!store.hasCapacity()) {
+    // tryReserve() claims a slot synchronously, before any of the async work
+    // below (spawn + handshake + connect) runs. Checking capacity with a
+    // plain read-then-act (the old hasCapacity()) left a window where many
+    // concurrent requests could all see room and all proceed, blowing past
+    // maxSessions arbitrarily. The reservation is released in the finally
+    // below on any failure path, or converted into a real entry by add().
+    if (!store.tryReserve()) {
       sendJson(res, 503, { jsonrpc: "2.0", error: { code: -32000, message: "Server at session capacity" }, id: null });
       return;
     }
 
-    const { server, stdioTransport } = await createBridgeServer();
-    const httpTransport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => randomUUID(),
-      enableJsonResponse: true,
-    });
+    let reservationSettled = false;
+    try {
+      const { server, stdioTransport } = await createBridgeServer();
+      const httpTransport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        enableJsonResponse: true,
+      });
 
-    httpTransport.onclose = () => {
-      if (httpTransport.sessionId) store.close(httpTransport.sessionId);
-    };
+      httpTransport.onclose = () => {
+        if (httpTransport.sessionId) store.close(httpTransport.sessionId);
+      };
 
-    await server.connect(httpTransport);
-    await httpTransport.handleRequest(req, res);
+      await server.connect(httpTransport);
+      await httpTransport.handleRequest(req, res);
 
-    if (httpTransport.sessionId) {
-      store.add(httpTransport.sessionId, { httpTransport, stdioTransport });
-      console.error(`Remote MCP session ${httpTransport.sessionId} initialized (total: ${store.size})`);
+      if (httpTransport.sessionId) {
+        store.add(httpTransport.sessionId, { httpTransport, stdioTransport });
+        reservationSettled = true;
+        console.error(`Remote MCP session ${httpTransport.sessionId} initialized (total: ${store.size})`);
+      } else {
+        void stdioTransport.close().catch(() => {});
+      }
+    } finally {
+      if (!reservationSettled) store.releaseReservation();
     }
   };
 }

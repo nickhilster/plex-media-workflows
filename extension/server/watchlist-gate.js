@@ -11,14 +11,41 @@
 //
 // Everything else (all read-only tools, Sonarr/Radarr/Trakt tools) passes
 // through unmodified.
+//
+// NOTE ON LOGGING: this runs inside Claude Desktop's Electron
+// UtilityProcess when launched as an extension, where process.stderr is
+// not guaranteed to behave like a normal OS-backed stream (piping to it,
+// or even writing large/frequent chunks, has been observed to crash the
+// process silently). All diagnostics here go to a local log file instead
+// of stderr/stdout, so a logging failure can never take down the proxy.
 
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import fs from "node:fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SERVER_PATH = path.join(__dirname, "build", "plex-mcp-server.js");
+const SERVER_PATH = path.join(__dirname, "keepalive-wrapper.mjs");
+const LOG_PATH = path.join(__dirname, "gate-debug.log");
+
+function log(msg) {
+  try {
+    fs.appendFileSync(LOG_PATH, `${new Date().toISOString()} ${msg}\n`);
+  } catch {
+    // If even file logging fails, there's nothing safe left to do — swallow it.
+  }
+}
+
+process.on("uncaughtException", (err) => {
+  log(`uncaught exception: ${err?.stack || err}`);
+  process.exit(1);
+});
+process.on("unhandledRejection", (err) => {
+  log(`unhandled rejection: ${err?.stack || err}`);
+});
+
+log("watchlist-gate starting");
 
 const ALLOWED_WRITE_TOOLS = new Set(["add_to_watchlist", "remove_from_watchlist"]);
 const ALL_WRITE_TOOLS = new Set([
@@ -41,13 +68,35 @@ const BLOCKED_WRITE_TOOLS = new Set(
 
 const child = spawn(process.execPath, [SERVER_PATH], {
   env: { ...process.env, PLEX_ENABLE_MUTATIVE_OPS: "true" },
-  stdio: ["pipe", "pipe", "inherit"],
+  stdio: ["pipe", "pipe", "pipe"],
 });
 
-child.on("exit", (code) => process.exit(code ?? 0));
+log(`child spawned, pid=${child.pid}`);
+
+// Never touch process.stderr here — just log child stderr to file.
+child.stderr.on("data", (chunk) => log(`[child stderr] ${chunk.toString().trimEnd()}`));
+child.stderr.on("error", (err) => log(`child stderr stream error: ${err?.stack || err}`));
+
+child.on("error", (err) => {
+  log(`child process error: ${err?.stack || err}`);
+  process.exit(1);
+});
+
+child.on("exit", (code, signal) => {
+  log(`child exited code=${code} signal=${signal}`);
+  process.exit(code ?? 0);
+});
+
+function safeWrite(stream, text) {
+  try {
+    stream.write(text);
+  } catch (err) {
+    log(`write failed: ${err?.stack || err}`);
+  }
+}
 
 function send(stream, obj) {
-  stream.write(JSON.stringify(obj) + "\n");
+  safeWrite(stream, JSON.stringify(obj) + "\n");
 }
 
 // parent stdin (requests from the MCP client) -> filter -> child stdin
@@ -58,7 +107,16 @@ fromClient.on("line", (line) => {
   try {
     msg = JSON.parse(line);
   } catch {
-    child.stdin.write(line + "\n");
+    safeWrite(child.stdin, line + "\n");
+    return;
+  }
+
+  // A JSON-RPC line can parse successfully as JSON while still not being a
+  // request object — e.g. the literal `null`, a bare number, or a batch
+  // array. Accessing .method on those either throws (null) or is silently
+  // undefined (array/number), so guard explicitly rather than assume shape.
+  if (msg === null || typeof msg !== "object" || Array.isArray(msg)) {
+    safeWrite(child.stdin, line + "\n");
     return;
   }
 
@@ -76,8 +134,9 @@ fromClient.on("line", (line) => {
     return;
   }
 
-  child.stdin.write(line + "\n");
+  safeWrite(child.stdin, line + "\n");
 });
+fromClient.on("close", () => log("client stdin closed"));
 
 // child stdout (responses/tool list) -> filter -> parent stdout
 const fromServer = createInterface({ input: child.stdout });
@@ -87,7 +146,7 @@ fromServer.on("line", (line) => {
   try {
     msg = JSON.parse(line);
   } catch {
-    process.stdout.write(line + "\n");
+    safeWrite(process.stdout, line + "\n");
     return;
   }
 
@@ -99,6 +158,12 @@ fromServer.on("line", (line) => {
 
   send(process.stdout, msg);
 });
+fromServer.on("close", () => log("child stdout closed"));
+
+process.stdin.on("error", (err) => log(`process.stdin error: ${err?.stack || err}`));
+process.stdout.on("error", (err) => log(`process.stdout error: ${err?.stack || err}`));
 
 process.on("SIGINT", () => child.kill("SIGINT"));
 process.on("SIGTERM", () => child.kill("SIGTERM"));
+
+log("watchlist-gate ready");
