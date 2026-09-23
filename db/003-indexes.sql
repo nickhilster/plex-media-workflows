@@ -1,0 +1,14 @@
+CREATE INDEX IF NOT EXISTS idx_media_type_added ON core.media_items (media_type, added_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_media_type_last_viewed ON core.media_items (media_type, last_viewed_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_media_show_episode_order ON core.media_items (show_rating_key, season_number, episode_number) WHERE media_type = 'episode' AND deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_media_parent_rating_key ON core.media_items (parent_rating_key) WHERE parent_rating_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_media_show_rating_key ON core.media_items (show_rating_key) WHERE show_rating_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_media_genres_gin ON core.media_items USING gin (genres);
+CREATE INDEX IF NOT EXISTS idx_media_directors_gin ON core.media_items USING gin (directors);
+CREATE INDEX IF NOT EXISTS idx_media_external_ids_gin ON core.media_items USING gin (external_ids);
+CREATE INDEX IF NOT EXISTS idx_media_search ON core.media_items USING gin (to_tsvector('english', coalesce(title,'') || ' ' || coalesce(summary,'')));
+CREATE INDEX IF NOT EXISTS idx_watch_user_started ON core.watch_events (user_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_watch_rating_started ON core.watch_events (plex_rating_key, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_watch_show_started ON core.watch_events (show_rating_key, started_at DESC) WHERE show_rating_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_state_user_watch_last ON core.user_media_state (user_id, watch_state, last_viewed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_recent_added ON core.recent_additions (added_at DESC);
