@@ -1,0 +1,15 @@
+{
+  "name": "plex-media-workflows",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "context:export": "node scripts/export-context-bridge.mjs --export",
+    "context:dry-run": "node --env-file=.env scripts/sync-context-bridge.mjs --dry-run",
+    "context:migrate": "node --env-file=.env scripts/sync-context-bridge.mjs --migrate",
+    "context:sync": "node --env-file=.env scripts/sync-context-bridge.mjs --sync",
+    "context:verify": "node --env-file=.env scripts/sync-context-bridge.mjs --verify"
+  },
+  "dependencies": {
+    "postgres": "^3.4.7"
+  }
+}
