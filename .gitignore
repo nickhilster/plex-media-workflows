@@ -30,3 +30,6 @@ tautulli/config/
 extension/server/node_modules/
 movie_library_scan.txt
 exports/
+nostalgia/data/
+nostalgia/config/
+nostalgia/logos/

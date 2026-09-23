@@ -35,6 +35,28 @@ services:
     networks:
       - plex-network
 
+  # NostalgiaTV - linear channel scheduler and IPTV/EPG server
+  nostalgia:
+    image: purestream711/nostalgiatv-server:latest
+    container_name: nostalgiatv-server
+    ports:
+      - "19850:19850"
+    environment:
+      - TZ=America/Toronto
+      - PUID=1000
+      - PGID=1000
+      - HDHR_ENABLED=true
+      - SCHEDULE_HOURS=720
+      - SCHEDULE_REFRESH_INTERVAL=21600
+      - PLEX_CONTENT_POLL_INTERVAL_SECONDS=300
+    volumes:
+      - ./nostalgia/data:/app/data
+      - ./nostalgia/config:/app/config
+      - ./nostalgia/logos:/app/logos
+    restart: unless-stopped
+    networks:
+      - plex-network
+
 networks:
   plex-network:
     driver: bridge
