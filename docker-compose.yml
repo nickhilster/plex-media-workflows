@@ -40,6 +40,7 @@ services:
     image: purestream711/nostalgiatv-server:latest
     container_name: nostalgiatv-server
     ports:
+      - "80:19850"
       - "19850:19850"
     environment:
       - TZ=America/Toronto
