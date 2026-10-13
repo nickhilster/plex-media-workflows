@@ -5,12 +5,14 @@ export const ALLOWED_TOOLS = new Set([
   'get_watch_history', 'get_fully_watched', 'get_watch_stats', 'get_user_stats',
   'get_library_stats', 'get_popular_content', 'get_recommendations',
   'get_editable_fields',
+  'create_playlist', 'add_to_playlist', 'remove_from_playlist',
+  'clear_playlist', 'delete_playlist', 'set_item_collections',
 ]);
 
 export function childEnvironment(env) {
   const clean = Object.fromEntries(Object.entries(env).filter(([key]) =>
     !/^(SONARR_|RADARR_|TRAKT_|MCP_|NODE_OPTIONS$|NODE_PATH$)/.test(key)));
-  clean.PLEX_ENABLE_MUTATIVE_OPS = 'false';
+  clean.PLEX_ENABLE_MUTATIVE_OPS = 'true';
   clean.PLEX_WRITE_ENABLED = 'false';
   // Prevent dotenv from silently reintroducing optional credentials from cwd.
   clean.DOTENV_CONFIG_PATH = '/dev/null';
@@ -22,4 +24,12 @@ export function permittedRequest(msg) {
   if (msg.method === 'tools/call') return ALLOWED_TOOLS.has(msg.params?.name);
   return ['initialize', 'notifications/initialized', 'notifications/cancelled',
     'notifications/progress', 'ping', 'tools/list'].includes(msg.method);
+}
+
+export function normalizeOrganizationCall(msg) {
+  if (msg?.method !== 'tools/call' || msg.params?.name !== 'set_item_collections') return msg;
+  const args = msg.params.arguments ?? {};
+  return {...msg, params: {name: 'update_metadata', arguments: {
+    ratingKey: args.ratingKey, collections: args.collections,
+  }}};
 }
