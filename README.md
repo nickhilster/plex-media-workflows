@@ -465,3 +465,7 @@ Tautulli:         C:\plex-mcp\tautulli\
 For questions or improvements, see the documentation in `docs/` or the upstream MCP server at https://github.com/niavasha/plex-mcp-server
 
 **Last Updated:** 2026-09-06
+
+## Debian / local Codex setup
+
+For the separate stdio-only launcher with an explicit Plex read-only tool allowlist, see [Debian and Codex setup](docs/DEBIAN_CODEX.md). It blocks watchlist writes and optional integration tools and does not expose an HTTP port. The historical Windows validation above does not establish Debian deployment status; the existing Windows extension has a different policy.
