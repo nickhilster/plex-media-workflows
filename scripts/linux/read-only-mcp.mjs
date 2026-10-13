@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import { ALLOWED_TOOLS, childEnvironment, permittedRequest } from './read-only-policy.mjs';
+import { ALLOWED_TOOLS, childEnvironment, permittedRequest, normalizeOrganizationCall } from './read-only-policy.mjs';
 
 if (!process.env.PLEX_TOKEN) {
   console.error('PLEX_TOKEN is required; supply it privately through the environment.');
@@ -27,7 +27,7 @@ input.on('line', (line) => {
   let msg;
   try { msg = JSON.parse(line); } catch { reject(null); return; }
   if (!permittedRequest(msg)) { reject(msg?.id); return; }
-  child.stdin.write(JSON.stringify(msg) + '\n');
+  child.stdin.write(JSON.stringify(normalizeOrganizationCall(msg)) + '\n');
 });
 input.on('close', () => child.kill());
 createInterface({input: child.stdout}).on('line', (line) => {
@@ -36,6 +36,7 @@ createInterface({input: child.stdout}).on('line', (line) => {
   if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return;
   if (Array.isArray(msg.result?.tools)) {
     msg.result.tools = msg.result.tools.filter(tool => ALLOWED_TOOLS.has(tool.name));
+    msg.result.tools.push({name: 'set_item_collections', description: 'Set the collection tags for one Plex item; this changes collection membership only.', inputSchema: {type: 'object', required: ['ratingKey', 'collections'], properties: {ratingKey: {type: 'string'}, collections: {type: 'array', items: {type: 'string'}}}}});
   }
   send(msg);
 });
