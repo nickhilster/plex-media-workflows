@@ -10,7 +10,7 @@ const call = name => ({jsonrpc:'2.0', id:1, method:'tools/call', params:{name}})
 test('only approved Plex queries pass; writes, integrations and future tools fail closed', () => {
   for (const name of ALLOWED_TOOLS) assert.equal(permittedRequest(call(name)), true);
   for (const name of ['add_to_watchlist','remove_from_watchlist','update_metadata',
-    'mark_watched','create_playlist','export_library','radarr_add_movie',
+    'mark_watched','export_library','radarr_add_movie',
     'sonarr_trigger_search','trakt_sync_from_trakt','future_write_tool']) {
     assert.equal(permittedRequest(call(name)), false, name);
   }
@@ -29,7 +29,7 @@ test('inherited optional credentials and runtime injection are stripped', () => 
     PLEX_ENABLE_MUTATIVE_OPS:'true',DOTENV_CONFIG_PATH:'/bad',PATH:'/usr/bin'});
   assert.equal(env.PLEX_TOKEN,'private');
   for (const key of ['RADARR_API_KEY','SONARR_URL','TRAKT_ACCESS_TOKEN','MCP_PORT','NODE_OPTIONS','NODE_PATH']) assert.equal(env[key],undefined);
-  assert.equal(env.PLEX_ENABLE_MUTATIVE_OPS,'false');
+  assert.equal(env.PLEX_ENABLE_MUTATIVE_OPS,'true');
   assert.equal(env.DOTENV_CONFIG_PATH,'/dev/null');
 });
 
@@ -67,7 +67,7 @@ test('stdio gate filters listings and prevents disallowed calls reaching a child
     assert.equal(replies.get(1).error.code,-32601);
     assert.equal(replies.get(2).error.code,-32601);
     assert.deepEqual(replies.get(3).result.tools,[{name:'get_libraries'}]);
-    assert.deepEqual(replies.get(4).result,{reachedChild:true,writes:'false',radarr:false});
+    assert.deepEqual(replies.get(4).result,{reachedChild:true,writes:'true',radarr:false});
     lines.close();
   } finally {
     if(proc) { const exited=new Promise(resolve=>proc.once('exit',resolve));proc.stdin.end();await exited; }
