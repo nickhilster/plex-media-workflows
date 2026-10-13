@@ -31,15 +31,14 @@ Use Node.js 20 or newer and npm. From a trusted checkout of this repository:
 
 ```bash
 cd extension/server
-npm install --omit=dev --ignore-scripts
+npm ci --omit=dev --ignore-scripts
 cd ../..
 node --test tests/linux-read-only.test.mjs
 ```
 
 The bundled JavaScript is committed; a TypeScript rebuild is not required.
-There is currently no committed lockfile in `extension/server`, so dependencies
-are not fully reproducible. Review the resolved packages and retain the generated
-lockfile before deploying. Do not use the Windows rebuild script on Debian:
+A committed lockfile pins the resolved dependencies. Review dependency changes
+before regenerating it. Do not use the Windows rebuild script on Debian:
 it references a separate source checkout not present at the documented path.
 
 ## Credentials and launch
@@ -84,3 +83,33 @@ separately when actually performed.
 
 Tautulli is a separate application. Installing it does not connect it to this
 bridge; no Tautulli integration or credentials are enabled by this change.
+
+## Desktop keyring launcher
+
+`keyring-launch.py` reads the Secret Service entry with attributes
+`service=codex-plex-readonly` and `account=nikhil`, then starts the gate as the
+current user. Install Debian's `libsecret-tools` and store the token using a
+trusted local helper or a hidden prompt piped to `secret-tool store`. Never
+put the token on the command line. The deployment helper can read the existing
+Plex preferences with graphical admin authorization and pipe the token directly
+to `secret-tool` running as nikhil; it must not print or persist that token.
+
+Set `PLEX_MCP_NODE` to an absolute Node.js 20+ executable if Node is not on PATH.
+The keyring launcher fixes the Plex URL to the local Dell and accepts no args.
+The desktop keyring must be unlocked, typically during desktop login.
+
+Example local Codex registration (no token in this file):
+
+```toml
+[mcp_servers.plex_readonly]
+command = "/usr/bin/python3"
+args = ["/opt/plex-media-workflows/scripts/linux/keyring-launch.py"]
+startup_timeout_sec = 45
+tool_timeout_sec = 60
+
+[mcp_servers.plex_readonly.env]
+PLEX_MCP_NODE = "/absolute/path/to/node"
+```
+
+Reload MCP servers or restart the client to load the new registration. Verify
+client discovery separately from the standalone MCP protocol test.
