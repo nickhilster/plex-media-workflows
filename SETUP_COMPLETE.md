@@ -154,7 +154,7 @@ Layer 4: Configuration Lock (PLEX_ENABLE_MUTATIVE_OPS=false)
 ### `.env` File (Local, Gitignored)
 
 ```env
-PLEX_TOKEN=your_plex_token_here
+PLEX_TOKEN=<redacted-rotate-if-exposed>
 PLEX_URL=http://127.0.0.1:32400
 MCP_HOST=127.0.0.1
 MCP_PORT=3002
@@ -170,7 +170,7 @@ MCP_PORT=3002
 
 ```env
 PLEX_URL=http://127.0.0.1:32400
-PLEX_TOKEN=replace_me
+PLEX_TOKEN=<redacted-rotate-if-exposed>
 MCP_HOST=127.0.0.1
 MCP_PORT=3002
 ```
